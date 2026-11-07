@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>المخطط الهندسي المعماري - منزل 6.66م × 30م</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Cairo & Tajawal -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        /* Architectural Grid Background */
+        .blueprint-bg {
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(rgba(59, 130, 246, 0.12) 1px, transparent 0),
+                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px, 40px 40px, 40px 40px;
+            background-position: -1px -1px;
+        }
+
+        /* Custom Scrollbar for side panel */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 3px;
+        }
+
+        canvas {
+            cursor: grab;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Toggle switch styling */
+        .toggle-checkbox:checked {
+            right: 1.5rem;
+            border-color: #3b82f6;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col blueprint-bg relative">
+
+    <!-- Header / Navbar -->
+    <header class="glass-panel px-6 py-3 flex items-center justify-between z-20 shadow-xl border-b border-slate-700/50">
+        <div class="flex items-center gap-3">
+            <div class="p-2.5 bg-blue-600/20 text-blue-400 rounded-xl border border-blue-500/30">
+                <i class="fa-solid fa-compass-drafting text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold text-white flex items-center gap-2">
+                    المخطط الهندسي المعماري المتكامل
+                    <span class="text-xs bg-blue-500/20 text-blue-400 px-2.5 py-0.5 rounded-full border border-blue-400/30">200 م²</span>
+                    <span class="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-400/30">مجسم علوي</span>
+                </h1>
+                <p class="text-xs text-slate-400">قطعة أرض بأبعاد: <span class="text-blue-300 font-semibold">6.66 متر عرض × 30.00 متر عمق</span></p>
+            </div>
+        </div>
+
+        <!-- Floor Switcher -->
+        <div class="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700/60">
+            <button id="btn-ground" onclick="switchFloor('ground')" class="px-5 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 bg-blue-600 text-white shadow-lg shadow-blue-600/30">
+                <i class="fa-solid fa-house-chimney"></i> الطابق الأرضي
+            </button>
+            <button id="btn-first" onclick="switchFloor('first')" class="px-5 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white transition-all duration-200 flex items-center gap-2">
+                <i class="fa-solid fa-building"></i> الطابق الأول (العلوي)
+            </button>
+        </div>
+
+        <!-- Action Quick Tools -->
+        <div class="flex items-center gap-2">
+            <button onclick="resetZoomPan()" title="إعادة ضبط العرض" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition">
+                <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <button onclick="zoomIn()" title="تكبير" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition">
+                <i class="fa-solid fa-magnifying-glass-plus"></i>
+            </button>
+            <button onclick="zoomOut()" title="تصغير" class="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl border border-slate-700 transition">
+                <i class="fa-solid fa-magnifying-glass-minus"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 flex relative overflow-hidden">
+
+        <!-- Left Controls / Layers Menu (Floating Overlay) -->
+        <div class="absolute right-4 top-4 z-10 flex flex-col gap-3 w-64">
+            <!-- Layers Card -->
+            <div class="glass-panel p-4 rounded-2xl shadow-2xl">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center justify-between">
+                    <span>طبقات العرض</span>
+                    <i class="fa-solid fa-layer-group text-blue-400"></i>
+                </h3>
+                
+                <div class="space-y-2.5 text-sm">
+                    <label class="flex items-center justify-between cursor-pointer p-2 rounded-lg hover:bg-slate-800/50 transition">
+                        <span class="text-slate-200 flex items-center gap-2"><i class="fa-solid fa-ruler-combined text-xs text-blue-400"></i> الأبعاد الهندسية</span>
+                        <input type="checkbox" id="layer-dimensions" checked onchange="redraw()" class="w-4 h-4 accent-blue-500 rounded">
+                    </label>
+
+                    <label class="flex items-center justify-between cursor-pointer p-2 rounded-lg hover:bg-slate-800/50 transition">
+                        <span class="text-slate-200 flex items-center gap-2"><i class="fa-solid fa-chair text-xs text-emerald-400"></i> فرش الأثاث</span>
+                        <input type="checkbox" id="layer-furniture" checked onchange="redraw()" class="w-4 h-4 accent-blue-500 rounded">
+                    </label>
+
+                    <label class="flex items-center justify-between cursor-pointer p-2 rounded-lg hover:bg-slate-800/50 transition">
+                        <span class="text-slate-200 flex items-center gap-2"><i class="fa-solid fa-font text-xs text-amber-400"></i> أسماء الفضاءات</span>
+                        <input type="checkbox" id="layer-labels" checked onchange="redraw()" class="w-4 h-4 accent-blue-500 rounded">
+                    </label>
+
+                    <label class="flex items-center justify-between cursor-pointer p-2 rounded-lg hover:bg-slate-800/50 transition">
+                        <span class="text-slate-200 flex items-center gap-2"><i class="fa-solid fa-tree text-xs text-green-400"></i> الحدائق والمناور</span>
+                        <input type="checkbox" id="layer-greenery" checked onchange="redraw()" class="w-4 h-4 accent-blue-500 rounded">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Dimensions Summary Card -->
+            <div class="glass-panel p-4 rounded-2xl shadow-2xl">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">بيانات الموقع</h3>
+                <div class="space-y-1.5 text-xs text-slate-300">
+                    <div class="flex justify-between py-1 border-b border-slate-700/40">
+                        <span class="text-slate-400">العرض:</span>
+                        <span class="font-bold text-white">6.66 متر</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-b border-slate-700/40">
+                        <span class="text-slate-400">العمق:</span>
+                        <span class="font-bold text-white">30.00 متر</span>
+                    </div>
+                    <div class="flex justify-between py-1 border-b border-slate-700/40">
+                        <span class="text-slate-400">المساحة الإجمالية:</span>
+                        <span class="font-bold text-blue-400">199.8 م² (~200م²)</span>
+                    </div>
+                    <div class="flex justify-between py-1">
+                        <span class="text-slate-400">نسبة البناء:</span>
+                        <span class="font-bold text-emerald-400">~78% (مع المناور)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div id="canvas-container" class="w-full h-full relative flex items-center justify-center">
+            <div id="blueprintCanvas" class="w-full h-full"></div>
+
+            <!-- Floating Info Hint -->
+            <div class="absolute bottom-4 right-4 glass-panel px-4 py-2 rounded-xl text-xs text-slate-400 pointer-events-none flex items-center gap-2">
+                <i class="fa-solid fa-hand-pointer text-blue-400 animate-bounce"></i>
+                <span>منظور ثلاثي الأبعاد من الأعلى — انقر على أي قسم للتفاصيل، عجلة الماوس للتقريب والسحب للتنقل</span>
+            </div>
+        </div>
+
+        <!-- Details Sidebar / Modal Panel (Left side) -->
+        <div id="details-panel" class="w-96 glass-panel h-full border-r border-slate-700/60 p-6 flex flex-col justify-between transition-all duration-300 transform -translate-x-full absolute left-0 top-0 bottom-0 z-30 shadow-2xl overflow-y-auto">
+            <div>
+                <div class="flex items-center justify-between pb-4 border-b border-slate-700/60 mb-4">
+                    <div class="flex items-center gap-2">
+                        <div id="room-icon" class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-couch"></i>
+                        </div>
+                        <div>
+                            <h2 id="room-title" class="text-lg font-bold text-white">تفاصيل الفضاء</h2>
+                            <span id="room-category" class="text-xs text-blue-400 font-medium">منطقة معيشة</span>
+                        </div>
+                    </div>
+                    <button onclick="closeDetails()" class="text-slate-400 hover:text-white text-lg p-1">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Room Metrics -->
+                <div class="grid grid-cols-2 gap-3 mb-6">
+                    <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                        <span class="text-xs text-slate-400 block mb-1">الأبعاد</span>
+                        <span id="room-dimensions" class="text-base font-bold text-emerald-400">4.50 × 5.00 م</span>
+                    </div>
+                    <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
+                        <span class="text-xs text-slate-400 block mb-1">المساحة التقريبية</span>
+                        <span id="room-area" class="text-base font-bold text-blue-400">22.5 م²</span>
+                    </div>
+                </div>
+
+                <!-- Room Description -->
+                <div class="mb-6">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">الوصف والوظيفة المعمارية</h3>
+                    <p id="room-description" class="text-sm text-slate-300 leading-relaxed bg-slate-900/40 p-3.5 rounded-xl border border-slate-800">
+                        انقر على أي جزء من المخطط المعماري لاستعراض المواصفات الخاصة به.
+                    </p>
+                </div>
+
+                <!-- Features list -->
+                <div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">المميزات والتصميم</h3>
+                    <ul id="room-features" class="space-y-2 text-xs text-slate-300">
+                        <!-- Dynamic content -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer Tip inside panel -->
+            <div class="mt-6 pt-4 border-t border-slate-700/60 text-xs text-slate-400 flex items-center gap-2">
+                <i class="fa-solid fa-lightbulb text-amber-400 text-sm"></i>
+                <span>التصميم يراعي التهوية والإضاءة الطبيعية المباشرة.</span>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Data Structures for Rooms (Scaled units: metres scaled to canvas pixels)
+        // Land Dimensions: 6.66m wide x 30.00m deep
+        
+        const REAL_WIDTH = 6.66;
+        const REAL_DEPTH = 30.0;
+
+        let currentFloor = 'ground'; // 'ground' or 'first'
+        let selectedRoom = null;
+
+        const viewRoot = document.getElementById('blueprintCanvas');
+        const container = document.getElementById('canvas-container');
+
+        const WALL_H = 2.7;
+        const WALL_T = 0.14;
+        const POLAR = 0.62;
+
+        let renderer, scene, camera, house, raycaster, pointer;
+        let camTarget, camDist = 46;
+        let panStart = null;
+        let dragMoved = false;
+        const pickables = [];
+
+        // Ground Floor Spaces List
+        const groundRooms = [
+            {
+                id: 'g-garage',
+                name: 'كراج سيارة ومدخل أمامي',
+                category: 'منطقة خارجية وخدمات',
+                x: 0, y: 0, w: 6.66, h: 5.0,
+                color: '#1e293b',
+                accentColor: '#38bdf8',
+                icon: 'fa-car',
+                desc: 'مدخل رئيسي للمبنى يتسع لسيارة عائلية مع ممر جانبي مريح للمشاة وزراعات جدارية خفيفة.',
+                features: ['يتسع لسيارة كبيرة', 'مدخل مشاة مستقل', 'إضاءة ترحيبية خارجية']
+            },
+            {
+                id: 'g-majlis',
+                name: 'مجلس الضيوف (الاستقبال)',
+                category: 'منطقة ضيافة',
+                x: 0.3, y: 5.0, w: 4.2, h: 5.5,
+                color: '#1e293b',
+                accentColor: '#fbbf24',
+                icon: 'fa-couch',
+                desc: 'مجلس ضيوف منفصل يوفر خصوصية تامة للعائلة، متصل بمدخل الضيوف ومغاسل وحمام خاص.',
+                features: ['استقلالية تامة للضيوف', 'إضاءة طبيعية على الكراج', 'استيعاب جلسة عربية أو أفرنجية']
+            },
+            {
+                id: 'g-guest-wc',
+                name: 'حمام ومغاسل الضيوف',
+                category: 'خدمات الضيوف',
+                x: 4.5, y: 5.0, w: 1.86, h: 2.5,
+                color: '#1e293b',
+                accentColor: '#f43f5e',
+                icon: 'fa-restroom',
+                desc: 'دورة مياه مجهزة للمجلس مع مغاسل خارجية مصممة بأسلوب راقٍ.',
+                features: ['تهوية عبر سكايلت / منور', 'طقم مغاسل فاخر']
+            },
+            {
+                id: 'g-corridor1',
+                name: 'ممر الموزع الرئيسي',
+                category: 'حركة ونقل',
+                x: 4.5, y: 7.5, w: 1.86, h: 3.0,
+                color: '#1e293b',
+                accentColor: '#94a3b8',
+                icon: 'fa-walking',
+                desc: 'ممر مدخل عائلي يصل بين الكراج الخارجي وصالة المعيشة الداخلية بشكل مباشر ومريح.',
+                features: ['مدخل عائلي جانبي', 'خصوصية لكشف الضيوف']
+            },
+            {
+                id: 'g-courtyard',
+                name: 'منور وسطي (حديقة داخلية)',
+                category: 'بيئي وإضاءة',
+                x: 0.3, y: 10.5, w: 2.0, h: 3.8,
+                color: '#064e3b',
+                accentColor: '#34d399',
+                icon: 'fa-tree',
+                desc: 'حديقة داخلية مفتوحة للسماء توفر إضاءة طبيعية شمسية وتهوية لقلب المنزل والصالة والمطبخ.',
+                features: ['إضاءة طبيعية 100%', 'منظر طبيعي داخل البيت', 'إمكانية زراعة أشجار زينة']
+            },
+            {
+                id: 'g-living',
+                name: 'صالة المعيشة العائلية',
+                category: 'معيشة عائلية',
+                x: 2.3, y: 10.5, w: 4.06, h: 5.2,
+                color: '#1e293b',
+                accentColor: '#60a5fa',
+                icon: 'fa-tv',
+                desc: 'قلب البيت النابض، صالة واسعة تطل مباشرة على الحديقة الداخلية عبر واجهة زجاجية كاملة.',
+                features: ['إطلالة بانورامية على المنور', 'مفتوحة على الحركة الرئيسية', 'مكيفة مركزياً']
+            },
+            {
+                id: 'g-stairs',
+                name: 'بيت الدرج / السلم الرئيسي',
+                category: 'حركة رأسي',
+                x: 0.3, y: 14.3, w: 2.0, h: 4.2,
+                color: '#1e293b',
+                accentColor: '#a78bfa',
+                icon: 'fa-stairs',
+                desc: 'سلم مريح بنظام حرف L يربط الطابق الأرضي بالطابق العلوي مع استغلال أسفله كمخزن أو ديكور.',
+                features: ['درجات مريحة (16 سم ارتفاع)', 'إضاءة مسار مخفية']
+            },
+            {
+                id: 'g-kitchen',
+                name: 'المطبخ الرئيسي',
+                category: 'خدمات وطبخ',
+                x: 2.3, y: 15.7, w: 4.06, h: 4.3,
+                color: '#1e293b',
+                accentColor: '#f97316',
+                icon: 'fa-utensils',
+                desc: 'مطبخ حديث وعملي مصمم بنظام كاونتر مفتوح أو مغلق حسب الرغبة، متصل بالمخزن.',
+                features: ['تصميم مثلث الحركة المثالي', 'تهوية ممتازة', 'مساحة تخزين واسعة']
+            },
+            {
+                id: 'g-pantry',
+                name: 'مطبخ حار / مخزن',
+                category: 'خدمات',
+                x: 0.3, y: 18.5, w: 2.0, h: 3.5,
+                color: '#1e293b',
+                accentColor: '#fb923c',
+                icon: 'fa-box',
+                desc: 'مطبخ حار للقلي والطبخ الثقيل مع رفوف تخزين أطعمة ومستلزمات منزلية.',
+                features: ['شفاط ميكانيكي قوي', 'عزل للروائح عن الصالة']
+            },
+            {
+                id: 'g-family-wc',
+                name: 'حمام ومغاسل العائلة',
+                category: 'خدمات عائلية',
+                x: 2.3, y: 20.0, w: 2.0, h: 2.0,
+                color: '#1e293b',
+                accentColor: '#f43f5e',
+                icon: 'fa-bath',
+                desc: 'حمام رئيسي يخدم منطقة المعيشة العائلية والغرفة الأرضية.',
+                features: ['دش زجاجي', 'طقم صحي معلق']
+            },
+            {
+                id: 'g-corridor2',
+                name: 'ممر غرفة النوم',
+                category: 'حركة',
+                x: 4.3, y: 20.0, w: 2.06, h: 3.8,
+                color: '#1e293b',
+                accentColor: '#94a3b8',
+                icon: 'fa-route',
+                desc: 'ممر خاص يوفر الهدوء والخصوصية لغرفة النوم الرئيسية الأرضية.',
+                features: ['خزانات جدارية إضافية']
+            },
+            {
+                id: 'g-master-bed',
+                name: 'غرفة النوم الرئيسية (الأرضية)',
+                category: 'نوم وراحة',
+                x: 0.3, y: 22.0, w: 4.0, h: 5.8,
+                color: '#1e293b',
+                accentColor: '#818cf8',
+                icon: 'fa-bed',
+                desc: 'غرفة نوم هادئة ومريحة في الجزء الخلفي من المنزل، تتميز بالهدوء التام وتطل على الحديقة الخلفية.',
+                features: ['إطلالة مباشرة على الممر/الحديقة الخلفية', 'اتساع لسرير كبير وخزانات']
+            },
+            {
+                id: 'g-back-garden',
+                name: 'الحديقة والمنور الخلفي',
+                category: 'بيئي وخارجي',
+                x: 0.3, y: 27.8, w: 6.06, h: 2.0,
+                color: '#064e3b',
+                accentColor: '#10b981',
+                icon: 'fa-leaf',
+                desc: 'منور وحديقة خلفية بعرض القطعة كاملة توفر إضاءة طبيعية فائقة لغرف النوم وتضمن التهوئة المستمرة.',
+                features: ['مساحة غسيل وتجفيف خارجية', 'إضاءة طبيعية كاملة للغرفة الخلفية']
+            }
+        ];
+
+        // First Floor Spaces List
+        const firstRooms = [
+            {
+                id: 'f-balcony',
+                name: 'شرفة الواجهة الأمامية',
+                category: 'خارجي وإطلالة',
+                x: 0.3, y: 0.3, w: 6.06, h: 1.7,
+                color: '#1e293b',
+                accentColor: '#38bdf8',
+                icon: 'fa-cloud-sun',
+                desc: 'شرفة عصرية تطل على الشارع الأمامي متصلة بجناح النوم الرئيسي.',
+                features: ['دربزين زجاجي عصري', 'حماية من الشمس']
+            },
+            {
+                id: 'f-master-suite',
+                name: 'جناح النوم الرئيسي (Master Suite)',
+                category: 'نوم رئيسي',
+                x: 0.3, y: 2.0, w: 4.2, h: 5.5,
+                color: '#1e293b',
+                accentColor: '#818cf8',
+                icon: 'fa-crown',
+                desc: 'جناح ملكي أمامي متكامل يتضمن منطقة نوم واسعة، غرفة ملابس (Dressing Room) وحمام خاص.',
+                features: ['اتصال بالشرفة Front View', 'غرفة ملابس مستقلة', 'حمام فاخر']
+            },
+            {
+                id: 'f-master-bath',
+                name: 'حمام الجناح الرئيسي',
+                category: 'خدمات',
+                x: 4.5, y: 2.0, w: 1.86, h: 3.0,
+                color: '#1e293b',
+                accentColor: '#f43f5e',
+                icon: 'fa-bath',
+                desc: 'حمام خاص للجناح الرئيسي مجهز بجاكوزي/دش مطري ومغاسل مزدوجة.',
+                features: ['تشطيبات رخامية', 'تهوية منور']
+            },
+            {
+                id: 'f-dressing',
+                name: 'غرفة الملابس (Dressing Room)',
+                category: 'تخزين ملابس',
+                x: 4.5, y: 5.0, w: 1.86, h: 2.5,
+                color: '#1e293b',
+                accentColor: '#c084fc',
+                icon: 'fa-shirt',
+                desc: 'غرفة ملابس مصممة بدولاب جداري متكامل.',
+                features: ['دولاب U-Shape', 'مرآة كاملة']
+            },
+            {
+                id: 'f-upper-hall',
+                name: 'صالة الموزع العلوية',
+                category: 'معيشة علوية',
+                x: 2.3, y: 10.0, w: 4.06, h: 4.5,
+                color: '#1e293b',
+                accentColor: '#60a5fa',
+                icon: 'fa-tv',
+                desc: 'صالة معيشة علوية تجمع أفراد العائلة وتطل على الفناء/المنور الوسطي.',
+                features: ['إضاءة من السكايلت', 'منطقة جلسة عائلية هادئة']
+            },
+            {
+                id: 'f-courtyard-void',
+                name: 'فتحة المنور الوسطي (Void)',
+                category: 'مفتوح',
+                x: 0.3, y: 10.0, w: 2.0, h: 4.3,
+                color: '#0f172a',
+                accentColor: '#34d399',
+                icon: 'fa-border-none',
+                desc: 'فراغ مفتوح فوق الحديقة الداخلية لضمان انتقال الضوء للطابقين.',
+                features: ['سكايلت زجاجي في السقف', 'ربط بصري بين الطابقين']
+            },
+            {
+                id: 'f-stairs',
+                name: 'بيت الدرج',
+                category: 'حركة',
+                x: 0.3, y: 14.3, w: 2.0, h: 4.2,
+                color: '#1e293b',
+                accentColor: '#a78bfa',
+                icon: 'fa-stairs',
+                desc: 'استمرار الدرج صعوداً إلى السطح (الروف).',
+                features: ['درابزين أمان زجاجي']
+            },
+            {
+                id: 'f-laundry',
+                name: 'غرفة الغسيل والخدمات',
+                category: 'خدمات غسيل',
+                x: 2.3, y: 14.5, w: 2.0, h: 2.5,
+                color: '#1e293b',
+                accentColor: '#38bdf8',
+                icon: 'fa-soap',
+                desc: 'غرفة مخصصة لغسالات الملابس والكي والتجفيف.',
+                features: ['مشارب وتصريف مياه مجهز', 'طاولة كاوية']
+            },
+            {
+                id: 'f-bath-shared',
+                name: 'الحمام المشترك العلوي',
+                category: 'خدمات',
+                x: 4.3, y: 14.5, w: 2.06, h: 2.5,
+                color: '#1e293b',
+                accentColor: '#f43f5e',
+                icon: 'fa-restroom',
+                desc: 'حمام واسع يخدم غرفتي النوم الإضافيتين.',
+                features: ['كابينة دش الحديثة']
+            },
+            {
+                id: 'f-bed2',
+                name: 'غرفة نوم إضافية (1)',
+                category: 'نوم عائلي',
+                x: 0.3, y: 18.8, w: 3.5, h: 4.5,
+                color: '#1e293b',
+                accentColor: '#38bdf8',
+                icon: 'fa-bed',
+                desc: 'غرفة نوم أولاد/بنات واسعة مع مكتب دراسي ودولاب ملابس.',
+                features: ['إضاءة على المنور الجانبي', 'مكتب دراسة']
+            },
+            {
+                id: 'f-bed3',
+                name: 'غرفة نوم إضافية (2)',
+                category: 'نوم عائلي',
+                x: 3.8, y: 18.8, w: 2.56, h: 4.5,
+                color: '#1e293b',
+                accentColor: '#2dd4bf',
+                icon: 'fa-child',
+                desc: 'غرفة نوم مريحة ومصممة بعناية.',
+                features: ['سريران سنقل أو سرير مزدوج']
+            },
+            {
+                id: 'f-master-back',
+                name: 'جناح نوم خلفي ثانٍ',
+                category: 'نوم رئيسي إضافي',
+                x: 0.3, y: 23.5, w: 6.06, h: 4.3,
+                color: '#1e293b',
+                accentColor: '#f472b6',
+                icon: 'fa-bed',
+                desc: 'غرفة نوم عائلية كبيرة في الخلف مطلة مباشرة على المنور والحديقة الشجرية.',
+                features: ['إطلالة واسعة', 'هدوء تام بعيد عن الشارع']
+            },
+            {
+                id: 'f-back-void',
+                name: 'فراغ المنور الخلفي',
+                category: 'بيئي',
+                x: 0.3, y: 27.8, w: 6.06, h: 2.0,
+                color: '#0f172a',
+                accentColor: '#10b981',
+                icon: 'fa-leaf',
+                desc: 'امتداد المنور الخلفي المفتوح للتهوية.',
+                features: ['تهوية الغرف الخلفية']
+            }
+        ];
+
+        // Aerial 3D model. Room footprints stay on the same plan coordinates.
+        const materials = {};
+
+        function wx(x) { return x - REAL_WIDTH / 2; }
+        function wz(y) { return y - REAL_DEPTH / 2; }
+
+        function roomKind(room) {
+            const id = room.id;
+            if (id.includes('void')) return 'void';
+            if (id.includes('courtyard') || id.includes('garden')) return 'garden';
+            if (id.includes('garage')) return 'garage';
+            if (id.includes('balcony')) return 'balcony';
+            if (id.includes('stairs')) return 'stairs';
+            if (id.includes('wc') || id.includes('bath')) return 'bath';
+            if (id.includes('kitchen') || id.includes('pantry')) return 'kitchen';
+            if (id.includes('laundry')) return 'laundry';
+            if (id.includes('dressing')) return 'dressing';
+            if (id.includes('bed') || id.includes('master') || id.includes('suite')) return 'bed';
+            if (id.includes('majlis')) return 'majlis';
+            if (id.includes('living') || id.includes('hall')) return 'living';
+            if (id.includes('corridor')) return 'corridor';
+            return 'room';
+        }
+
+        function paintTexture(w, h, draw) {
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const g = canvas.getContext('2d');
+            draw(g, w, h);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+            tex.anisotropy = 8;
+            if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+            return tex;
+        }
+
+        function makeMaterials() {
+            const wood = paintTexture(256, 256, (g, w, h) => {
+                g.fillStyle = '#c6a36e';
+                g.fillRect(0, 0, w, h);
+                for (let i = 0; i < 28; i++) {
+                    g.strokeStyle = `rgba(92, 58, 28, ${0.08 + (i % 5) * 0.03})`;
+                    g.lineWidth = 1 + (i % 3);
+                    g.beginPath();
+                    const y = (i * 9) % h;
+                    g.moveTo(0, y);
+                    g.bezierCurveTo(70, y + 6, 150, y - 5, w, y + 2);
+                    g.stroke();
+                }
+            });
+            wood.repeat.set(2.2, 2.2);
+
+            const grass = paintTexture(256, 256, (g, w, h) => {
+                g.fillStyle = '#3d6b3a';
+                g.fillRect(0, 0, w, h);
+                for (let i = 0; i < 700; i++) {
+                    g.fillStyle = i % 2 ? '#4e8a45' : '#2c5528';
+                    g.fillRect(Math.random() * w, Math.random() * h, 2, 3);
+                }
+            });
+            grass.repeat.set(3, 3);
+
+            const tile = paintTexture(256, 256, (g, w, h) => {
+                g.fillStyle = '#d8d2c8';
+                g.fillRect(0, 0, w, h);
+                g.strokeStyle = '#a39c92';
+                g.lineWidth = 4;
+                for (let i = 0; i <= 4; i++) {
+                    g.beginPath();
+                    g.moveTo(i * 64, 0);
+                    g.lineTo(i * 64, h);
+                    g.stroke();
+                    g.beginPath();
+                    g.moveTo(0, i * 64);
+                    g.lineTo(w, i * 64);
+                    g.stroke();
+                }
+            });
+            tile.repeat.set(2, 2);
+
+            const concrete = paintTexture(256, 256, (g, w, h) => {
+                g.fillStyle = '#b7b3ac';
+                g.fillRect(0, 0, w, h);
+                for (let i = 0; i < 180; i++) {
+                    g.fillStyle = `rgba(80, 76, 70, ${Math.random() * 0.15})`;
+                    g.fillRect(Math.random() * w, Math.random() * h, 3, 2);
+                }
+            });
+            concrete.repeat.set(1.5, 1.5);
+
+            const std = (color, extra) => new THREE.MeshStandardMaterial(Object.assign({
+                color,
+                roughness: 0.78,
+                metalness: 0.02
+            }, extra));
+
+            materials.plaster = std('#f4f0e8', { roughness: 0.9 });
+            materials.stone = std('#cfc6b8', { roughness: 0.92 });
+            materials.site = std('#6d675e', { roughness: 1 });
+            materials.asphalt = std('#3a4148', { roughness: 0.95 });
+            materials.wood = std('#ffffff', { map: wood, roughness: 0.62 });
+            materials.grass = std('#ffffff', { map: grass, roughness: 0.95 });
+            materials.tile = std('#ffffff', { map: tile, roughness: 0.42 });
+            materials.concrete = std('#ffffff', { map: concrete, roughness: 0.88 });
+            materials.deck = std('#a9784c', { roughness: 0.7 });
+            materials.linen = std('#f6f1e8', { roughness: 0.85 });
+            materials.pillow = std('#efe8dc', { roughness: 0.8 });
+            materials.woodDark = std('#6a4b30', { roughness: 0.55 });
+            materials.majlis = std('#c2a078', { roughness: 0.8 });
+            materials.sofa = std('#7f8c99', { roughness: 0.78 });
+            materials.car = std('#1d3e66', { roughness: 0.28, metalness: 0.62 });
+            materials.glassDark = std('#163044', { roughness: 0.12, metalness: 0.4, transparent: true, opacity: 0.78 });
+            materials.glass = new THREE.MeshStandardMaterial({
+                color: '#c5e4f5',
+                roughness: 0.08,
+                metalness: 0.05,
+                transparent: true,
+                opacity: 0.32,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            materials.cabinet = std('#f7f6f3', { roughness: 0.45 });
+            materials.counter = std('#4b5563', { roughness: 0.35, metalness: 0.12 });
+            materials.canopy = std('#2f7a3e', { roughness: 0.85 });
+            materials.canopyAlt = std('#256b4a', { roughness: 0.85 });
+            materials.trunk = std('#6b4428', { roughness: 0.9 });
+            materials.shaft = std('#121820', { roughness: 1 });
+            materials.rug = std('#8c3d3d', { roughness: 0.92 });
+            materials.amber = new THREE.MeshBasicMaterial({ color: '#f59e0b' });
+            materials.screen = std('#111827', { roughness: 0.3, metalness: 0.4 });
+        }
+
+        function initView() {
+            makeMaterials();
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color('#162033');
+
+            const rect = container.getBoundingClientRect();
+            camera = new THREE.PerspectiveCamera(34, Math.max(rect.width, 1) / Math.max(rect.height, 1), 0.1, 220);
+            camTarget = new THREE.Vector3(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            renderer.setSize(rect.width, rect.height);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            if (THREE.sRGBEncoding) renderer.outputEncoding = THREE.sRGBEncoding;
+            if (THREE.ACESFilmicToneMapping) {
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                renderer.toneMappingExposure = 1.08;
+            }
+            renderer.domElement.style.display = 'block';
+            renderer.domElement.style.cursor = 'grab';
+            viewRoot.appendChild(renderer.domElement);
+
+            scene.add(new THREE.HemisphereLight('#dbeafe', '#8a7562', 0.55));
+            const ambient = new THREE.AmbientLight('#fff4e8', 0.28);
+            scene.add(ambient);
+
+            const sun = new THREE.DirectionalLight('#fff3dd', 1.25);
+            sun.position.set(16, 28, 12);
+            sun.castShadow = true;
+            sun.shadow.mapSize.set(2048, 2048);
+            sun.shadow.camera.left = -22;
+            sun.shadow.camera.right = 22;
+            sun.shadow.camera.top = 22;
+            sun.shadow.camera.bottom = -22;
+            sun.shadow.camera.near = 1;
+            sun.shadow.camera.far = 80;
+            sun.shadow.bias = -0.0006;
+            scene.add(sun);
+            scene.add(sun.target);
+
+            const fill = new THREE.DirectionalLight('#c7d7ee', 0.28);
+            fill.position.set(-12, 16, -10);
+            scene.add(fill);
+
+            house = new THREE.Group();
+            scene.add(house);
+
+            raycaster = new THREE.Raycaster();
+            pointer = new THREE.Vector2();
+
+            renderer.domElement.addEventListener('pointerdown', onPointerDown);
+            renderer.domElement.addEventListener('pointermove', onPointerMove);
+            renderer.domElement.addEventListener('pointerup', onPointerUp);
+            renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
+            window.addEventListener('resize', resizeView);
+
+            resizeView();
+            frameCamera();
+            redraw();
+            requestAnimationFrame(animate);
+            document.fonts.ready.then(() => redraw());
+        }
+
+        function resizeView() {
+            const rect = container.getBoundingClientRect();
+            if (!renderer || rect.width < 2 || rect.height < 2) return;
+            camera.aspect = rect.width / rect.height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(rect.width, rect.height);
+        }
+
+        function applyCamera() {
+            const y = Math.cos(POLAR) * camDist;
+            const z = Math.sin(POLAR) * camDist;
+            camera.position.set(camTarget.x, camTarget.y + y, camTarget.z + z);
+            camera.lookAt(camTarget);
+        }
+
+        function frameCamera() {
+            camTarget.set(0, 0.4, 0);
+            const vFov = camera.fov * Math.PI / 180;
+            const hFov = 2 * Math.atan(Math.tan(vFov / 2) * camera.aspect);
+            const distDepth = (REAL_DEPTH + 8) / (2 * Math.tan(vFov / 2));
+            const distWidth = (REAL_WIDTH + 10) / (2 * Math.tan(hFov / 2));
+            camDist = Math.max(distDepth, distWidth) * 0.72;
+            applyCamera();
+        }
+
+        function metersPerPixel() {
+            const vFov = camera.fov * Math.PI / 180;
+            const dist = camera.position.distanceTo(camTarget);
+            return (2 * Math.tan(vFov / 2) * dist) / renderer.domElement.clientHeight;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        function disposeTree(obj) {
+            obj.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                const mats = child.material ? [].concat(child.material) : [];
+                mats.forEach(m => {
+                    if (m.userData && m.userData.disposeMap && m.map) m.map.dispose();
+                    if (m.userData && m.userData.unique) m.dispose();
+                });
+            });
+        }
+
+        function clearHouse() {
+            pickables.length = 0;
+            while (house.children.length) {
+                const child = house.children[0];
+                house.remove(child);
+                disposeTree(child);
+            }
+        }
+
+        function addMesh(parent, geometry, material, x, y, z, room) {
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            if (room) {
+                mesh.userData.room = room;
+                pickables.push(mesh);
+            }
+            parent.add(mesh);
+            return mesh;
+        }
+
+        function addBox(parent, cx, cy, cz, sx, sy, sz, material, room) {
+            if (sx <= 0.02 || sy <= 0.02 || sz <= 0.02) return null;
+            return addMesh(parent, new THREE.BoxGeometry(sx, sy, sz), material, cx, cy, cz, room);
+        }
+
+        function addWalls(parent, room, height, thick, material, skip) {
+            const x = room.x;
+            const y = room.y;
+            const w = room.w;
+            const h = room.h;
+            const cy = 0.16 + height / 2;
+            skip = skip || {};
+            if (!skip.n) addBox(parent, wx(x + w / 2), cy, wz(y + thick / 2), w, height, thick, material, room);
+            if (!skip.s) addBox(parent, wx(x + w / 2), cy, wz(y + h - thick / 2), w, height, thick, material, room);
+            const side = Math.max(0.05, h - thick * 2);
+            if (!skip.w) addBox(parent, wx(x + thick / 2), cy, wz(y + h / 2), thick, height, side, material, room);
+            if (!skip.e) addBox(parent, wx(x + w - thick / 2), cy, wz(y + h / 2), thick, height, side, material, room);
+        }
+
+        function floorMaterial(kind, room) {
+            let base;
+            if (kind === 'garden') base = document.getElementById('layer-greenery').checked ? materials.grass : materials.concrete;
+            else if (kind === 'void') base = materials.shaft;
+            else if (kind === 'garage') base = materials.concrete;
+            else if (kind === 'balcony') base = materials.deck;
+            else if (kind === 'bath' || kind === 'kitchen' || kind === 'laundry') base = materials.tile;
+            else if (kind === 'stairs') base = materials.stone;
+            else base = materials.wood;
+            const mat = base.clone();
+            mat.userData.unique = true;
+            if (selectedRoom && selectedRoom.id === room.id) {
+                mat.emissive = new THREE.Color(room.accentColor);
+                mat.emissiveIntensity = 0.22;
+            }
+            return mat;
+        }
+
+        function wrapLines(ctx, text, maxWidth) {
+            const words = String(text).split(' ');
+            const lines = [];
+            let line = '';
+            words.forEach(word => {
+                const test = line ? line + ' ' + word : word;
+                if (ctx.measureText(test).width > maxWidth && line) {
+                    lines.push(line);
+                    line = word;
+                } else {
+                    line = test;
+                }
+            });
+            if (line) lines.push(line);
+            return lines.slice(0, 2);
+        }
+
+        function makeLabel(title, sub, width) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 1024;
+            canvas.height = 512;
+            const g = canvas.getContext('2d');
+            g.clearRect(0, 0, 1024, 512);
+            g.direction = 'rtl';
+            g.textAlign = 'center';
+            g.textBaseline = 'middle';
+            g.font = '700 72px Tajawal, sans-serif';
+            const lines = wrapLines(g, title, 920);
+            g.fillStyle = 'rgba(255,252,247,0.92)';
+            roundRect(g, 36, 78, 952, sub ? 340 : 280, 40);
+            g.fill();
+            g.fillStyle = '#1c1917';
+            const top = sub ? 188 : 230;
+            lines.forEach((line, i) => g.fillText(line, 512, top + i * 78));
+            if (sub) {
+                g.font = '500 52px Tajawal, sans-serif';
+                g.fillStyle = '#57534e';
+                g.fillText(sub, 512, top + lines.length * 78 + 8);
+            }
+            const tex = new THREE.CanvasTexture(canvas);
+            if (THREE.sRGBEncoding) tex.encoding = THREE.sRGBEncoding;
+            const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false });
+            mat.userData.unique = true;
+            mat.userData.disposeMap = true;
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, width * 0.5), mat);
+            mesh.rotation.x = -Math.PI / 2;
+            mesh.renderOrder = 6;
+            mesh.castShadow = false;
+            return mesh;
+        }
+
+        function roundRect(g, x, y, w, h, r) {
+            g.beginPath();
+            g.moveTo(x + r, y);
+            g.arcTo(x + w, y, x + w, y + h, r);
+            g.arcTo(x + w, y + h, x, y + h, r);
+            g.arcTo(x, y + h, x, y, r);
+            g.arcTo(x, y, x + w, y, r);
+            g.closePath();
+        }
+
+        function addFurniture(parent, room, kind) {
+            if (kind === 'bed') {
+                const bedW = Math.min(1.9, room.w - 0.7);
+                const bedL = Math.min(2.15, room.h - 1.1);
+                const cx = room.x + room.w / 2;
+                const head = room.y + 0.45;
+                addBox(parent, wx(cx), 0.32, wz(head + bedL / 2), bedW, 0.28, bedL, materials.woodDark, room);
+                addBox(parent, wx(cx), 0.52, wz(head + bedL / 2 + 0.04), bedW - 0.1, 0.16, bedL - 0.12, materials.linen, room);
+                addBox(parent, wx(cx - bedW * 0.22), 0.64, wz(head + 0.32), bedW * 0.34, 0.1, 0.42, materials.pillow, room);
+                addBox(parent, wx(cx + bedW * 0.22), 0.64, wz(head + 0.32), bedW * 0.34, 0.1, 0.42, materials.pillow, room);
+                addBox(parent, wx(cx), 0.7, wz(head + 0.06), bedW + 0.04, 0.7, 0.08, materials.woodDark, room);
+                if (room.w > 3.2) {
+                    addBox(parent, wx(room.x + room.w - 0.42), 1.15, wz(room.y + room.h * 0.62), 0.55, 2.05, Math.min(2.4, room.h * 0.45), materials.woodDark, room);
+                }
+            }
+
+            if (kind === 'majlis' || kind === 'living') {
+                const fabric = kind === 'majlis' ? materials.majlis : materials.sofa;
+                const inset = 0.4;
+                const seat = 0.62;
+                const y0 = 0.42;
+                addBox(parent, wx(room.x + room.w / 2), y0, wz(room.y + room.h - inset - seat / 2), room.w - inset * 2, 0.42, seat, fabric, room);
+                addBox(parent, wx(room.x + inset + seat / 2), y0, wz(room.y + room.h / 2), seat, 0.42, room.h - inset * 2, fabric, room);
+                addBox(parent, wx(room.x + room.w - inset - seat / 2), y0, wz(room.y + room.h / 2), seat, 0.42, room.h - inset * 2, fabric, room);
+                addBox(parent, wx(room.x + room.w / 2), 0.28, wz(room.y + room.h / 2), Math.min(1.3, room.w * 0.35), 0.28, Math.min(0.8, room.h * 0.22), materials.woodDark, room);
+                if (kind === 'living') {
+                    addBox(parent, wx(room.x + room.w / 2), 0.2, wz(room.y + room.h / 2 + 0.2), Math.min(2.4, room.w * 0.55), 0.04, Math.min(1.6, room.h * 0.32), materials.rug, room);
+                    addBox(parent, wx(room.x + room.w - 0.2), 0.7, wz(room.y + 0.55), 0.06, 0.7, 1.3, materials.screen, room);
+                }
+            }
+
+            if (kind === 'garage') {
+                const cx = room.x + 2.15;
+                const cy = room.y + 2.55;
+                addBox(parent, wx(cx), 0.48, wz(cy), 1.85, 0.48, 4.35, materials.car, room);
+                addBox(parent, wx(cx), 0.88, wz(cy + 0.15), 1.7, 0.4, 2.15, materials.glassDark, room);
+                addBox(parent, wx(cx), 0.32, wz(cy - 1.85), 1.7, 0.16, 0.35, materials.screen, room);
+                [[-0.75, -1.35], [0.75, -1.35], [-0.75, 1.45], [0.75, 1.45]].forEach(([dx, dz]) => {
+                    addBox(parent, wx(cx + dx), 0.28, wz(cy + dz), 0.22, 0.42, 0.62, materials.shaft, room);
+                });
+                addBox(parent, wx(room.x + 5.55), 0.2, wz(room.y + room.h / 2), 1.5, 0.03, room.h - 0.4, materials.stone, room);
+            }
+
+            if (kind === 'kitchen') {
+                addBox(parent, wx(room.x + room.w - 0.42), 0.55, wz(room.y + room.h / 2), 0.62, 0.9, room.h - 0.5, materials.cabinet, room);
+                addBox(parent, wx(room.x + room.w - 0.42), 1.02, wz(room.y + room.h / 2), 0.68, 0.06, room.h - 0.4, materials.counter, room);
+                addBox(parent, wx(room.x + room.w / 2), 0.55, wz(room.y + room.h - 0.42), room.w - 1.3, 0.9, 0.62, materials.cabinet, room);
+                addBox(parent, wx(room.x + room.w / 2), 1.02, wz(room.y + room.h - 0.42), room.w - 1.2, 0.06, 0.68, materials.counter, room);
+            }
+
+            if (kind === 'bath') {
+                addBox(parent, wx(room.x + 0.48), 0.28, wz(room.y + 0.5), 0.42, 0.4, 0.62, materials.cabinet, room);
+                addBox(parent, wx(room.x + room.w - 0.48), 1.05, wz(room.y + room.h - 0.5), 0.7, 1.9, 0.7, materials.glass, room);
+                addBox(parent, wx(room.x + 0.42), 0.55, wz(room.y + room.h - 0.4), 0.48, 0.8, 0.85, materials.cabinet, room);
+            }
+
+            if (kind === 'stairs') {
+                const steps = 14;
+                for (let i = 0; i < steps; i++) {
+                    const rise = ((i + 1) / steps) * 2.45;
+                    const tread = room.h / steps;
+                    addBox(parent, wx(room.x + room.w / 2), 0.16 + rise / 2, wz(room.y + tread * i + tread / 2), room.w - 0.28, rise, tread * 0.9, materials.stone, room);
+                }
+            }
+
+            if (kind === 'laundry') {
+                addBox(parent, wx(room.x + 0.55), 0.55, wz(room.y + 0.6), 0.65, 0.85, 0.65, materials.cabinet, room);
+                addBox(parent, wx(room.x + 1.3), 0.55, wz(room.y + 0.6), 0.65, 0.85, 0.65, materials.screen, room);
+            }
+
+            if (kind === 'dressing') {
+                addBox(parent, wx(room.x + room.w / 2), 1.15, wz(room.y + 0.32), room.w - 0.3, 2.1, 0.5, materials.woodDark, room);
+                addBox(parent, wx(room.x + 0.28), 1.15, wz(room.y + room.h / 2), 0.45, 2.1, room.h - 0.8, materials.woodDark, room);
+            }
+
+            if (room.id === 'f-bed2') {
+                addBox(parent, wx(room.x + 0.7), 0.48, wz(room.y + room.h - 0.55), 1.1, 0.72, 0.55, materials.woodDark, room);
+            }
+        }
+
+        function addTree(parent, x, y, scale, room, alt) {
+            addMesh(parent, new THREE.CylinderGeometry(0.06 * scale, 0.09 * scale, 0.7 * scale, 8), materials.trunk, wx(x), 0.2 + 0.35 * scale, wz(y), room);
+            addMesh(parent, new THREE.SphereGeometry(0.55 * scale, 16, 12), alt ? materials.canopyAlt : materials.canopy, wx(x), 0.55 + 0.85 * scale, wz(y), room);
+        }
+
+        function addGreenery(parent, room) {
+            if (room.w > 3) {
+                addTree(parent, room.x + room.w * 0.32, room.y + room.h * 0.45, 1.15, room, false);
+                addTree(parent, room.x + room.w * 0.68, room.y + room.h * 0.6, 0.85, room, true);
+            } else {
+                addTree(parent, room.x + room.w / 2, room.y + room.h / 2, 1, room, false);
+            }
+        }
+
+        function addDimensions(parent) {
+            const y = -1.25;
+            addBox(parent, wx(REAL_WIDTH / 2), 0.25, wz(y), REAL_WIDTH, 0.04, 0.04, materials.amber);
+            addBox(parent, wx(0), 0.25, wz(y), 0.04, 0.04, 0.45, materials.amber);
+            addBox(parent, wx(REAL_WIDTH), 0.25, wz(y), 0.04, 0.04, 0.45, materials.amber);
+            const widthLabel = makeLabel('الواجهة: 6.66 م', '', 3.4);
+            widthLabel.position.set(wx(REAL_WIDTH / 2), 0.32, wz(y - 0.7));
+            parent.add(widthLabel);
+
+            const x = REAL_WIDTH + 1.2;
+            addBox(parent, wx(x), 0.25, wz(REAL_DEPTH / 2), 0.04, 0.04, REAL_DEPTH, materials.amber);
+            addBox(parent, wx(x), 0.25, wz(0), 0.45, 0.04, 0.04, materials.amber);
+            addBox(parent, wx(x), 0.25, wz(REAL_DEPTH), 0.45, 0.04, 0.04, materials.amber);
+            const depthLabel = makeLabel('العمق الكلي: 30.00 متر', '', 4.4);
+            depthLabel.position.set(wx(REAL_WIDTH + 3.8), 0.32, wz(REAL_DEPTH / 2));
+            parent.add(depthLabel);
+        }
+
+        function buildHouse() {
+            const showFurn = document.getElementById('layer-furniture').checked;
+            const showLabels = document.getElementById('layer-labels').checked;
+            const showDims = document.getElementById('layer-dimensions').checked;
+            const showGreen = document.getElementById('layer-greenery').checked;
+            const rooms = currentFloor === 'ground' ? groundRooms : firstRooms;
+
+            addBox(house, 0, -0.04, wz(REAL_DEPTH / 2 - 0.35), REAL_WIDTH + 3.2, 0.1, REAL_DEPTH + 3.4, materials.site);
+            addBox(house, 0, 0.06, 0, REAL_WIDTH, 0.12, REAL_DEPTH, materials.stone);
+            addBox(house, 0, 0.12, wz(-1.35), REAL_WIDTH + 3.2, 0.05, 2.3, materials.asphalt);
+
+            rooms.forEach((room, index) => {
+                const kind = roomKind(room);
+                const group = new THREE.Group();
+                group.position.y = index * 0.004;
+                house.add(group);
+                const cx = wx(room.x + room.w / 2);
+                const cz = wz(room.y + room.h / 2);
+                const floorH = kind === 'void' ? 0.08 : 0.1;
+                const floorY = kind === 'void' ? 0.08 : 0.18;
+                addBox(group, cx, floorY, cz, room.w, floorH, room.h, floorMaterial(kind, room), room);
+
+                if (kind === 'garden') {
+                    addWalls(group, room, 0.42, 0.12, materials.stone, null);
+                    if (showGreen) addGreenery(group, room);
+                } else if (kind === 'void') {
+                    addWalls(group, room, 1.05, 0.06, materials.glass, null);
+                } else if (kind === 'garage') {
+                    addWalls(group, room, 2.45, WALL_T, materials.plaster, { n: true });
+                } else if (kind === 'balcony') {
+                    addWalls(group, room, 1.05, 0.05, materials.glass, { s: true });
+                } else if (kind === 'living') {
+                    addWalls(group, room, WALL_H, WALL_T, materials.plaster, { w: true });
+                    addWalls(group, room, WALL_H, 0.06, materials.glass, { n: true, s: true, e: true });
+                } else if (kind === 'stairs') {
+                    addWalls(group, room, WALL_H, WALL_T, materials.plaster, null);
+                } else {
+                    const skip = room.id === 'f-master-suite' ? { n: true } : null;
+                    addWalls(group, room, WALL_H, WALL_T, materials.plaster, skip);
+                }
+
+                if (showFurn && kind !== 'garden' && kind !== 'void' && kind !== 'corridor' && kind !== 'balcony') {
+                    addFurniture(group, room, kind);
+                }
+
+                if (showLabels) {
+                    const sub = showDims ? `${room.w.toFixed(2)}m × ${room.h.toFixed(2)}m` : '';
+                    const label = makeLabel(room.name, sub, Math.max(1.35, Math.min(room.w * 0.96, 4.2)));
+                    const open = kind === 'garden' || kind === 'void' || kind === 'balcony' || kind === 'garage';
+                    label.position.set(cx, open ? 1.15 : WALL_H + 0.18, cz);
+                    label.userData.room = room;
+                    pickables.push(label);
+                    group.add(label);
+                }
+
+                if (selectedRoom && selectedRoom.id === room.id) {
+                    const box = new THREE.BoxGeometry(room.w + 0.08, kind === 'garden' || kind === 'void' || kind === 'balcony' ? 1.1 : WALL_H, room.h + 0.08);
+                    const edges = new THREE.LineSegments(
+                        new THREE.EdgesGeometry(box),
+                        Object.assign(new THREE.LineBasicMaterial({ color: room.accentColor }), { userData: { unique: true } })
+                    );
+                    box.dispose();
+                    edges.position.set(cx, (kind === 'garden' || kind === 'balcony' ? 0.7 : 1.45), cz);
+                    group.add(edges);
+                }
+            });
+
+            if (showDims) addDimensions(house);
+        }
+
+        function redraw() {
+            if (!house) return;
+            clearHouse();
+            buildHouse();
+        }
+
+        function switchFloor(floor) {
+            currentFloor = floor;
+            const btnGround = document.getElementById('btn-ground');
+            const btnFirst = document.getElementById('btn-first');
+            if (floor === 'ground') {
+                btnGround.className = "px-5 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 bg-blue-600 text-white shadow-lg shadow-blue-600/30";
+                btnFirst.className = "px-5 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white transition-all duration-200 flex items-center gap-2";
+            } else {
+                btnFirst.className = "px-5 py-2 rounded-lg text-sm font-bold transition-all duration-200 flex items-center gap-2 bg-blue-600 text-white shadow-lg shadow-blue-600/30";
+                btnGround.className = "px-5 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white transition-all duration-200 flex items-center gap-2";
+            }
+            closeDetails();
+        }
+
+        function onPointerDown(e) {
+            dragMoved = false;
+            panStart = {
+                x: e.clientX,
+                y: e.clientY,
+                tx: camTarget.x,
+                tz: camTarget.z
+            };
+            renderer.domElement.style.cursor = 'grabbing';
+            renderer.domElement.setPointerCapture(e.pointerId);
+        }
+
+        function onPointerMove(e) {
+            if (!panStart) return;
+            const dx = e.clientX - panStart.x;
+            const dy = e.clientY - panStart.y;
+            if (Math.hypot(dx, dy) > 4) dragMoved = true;
+            const mpp = metersPerPixel();
+            camTarget.x = panStart.tx - dx * mpp;
+            camTarget.z = panStart.tz - dy * mpp;
+            applyCamera();
+        }
+
+        function onPointerUp(e) {
+            renderer.domElement.style.cursor = 'grab';
+            if (panStart && !dragMoved) selectAt(e);
+            panStart = null;
+        }
+
+        function onWheel(e) {
+            e.preventDefault();
+            zoomBy(e.deltaY < 0 ? 0.9 : 1.1);
+        }
+
+        function zoomBy(factor) {
+            camDist = Math.min(110, Math.max(14, camDist * factor));
+            applyCamera();
+        }
+
+        function zoomIn() { zoomBy(0.82); }
+        function zoomOut() { zoomBy(1.22); }
+        function resetZoomPan() { frameCamera(); }
+
+        function selectAt(e) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(pointer, camera);
+            const hits = raycaster.intersectObjects(pickables, false);
+            if (hits.length && hits[0].object.userData.room) openDetails(hits[0].object.userData.room);
+        }
+
+        function openDetails(room) {
+            selectedRoom = room;
+            redraw();
+
+            const panel = document.getElementById('details-panel');
+            document.getElementById('room-title').innerText = room.name;
+            document.getElementById('room-category').innerText = room.category;
+            document.getElementById('room-dimensions').innerText = `${room.w.toFixed(2)} × ${room.h.toFixed(2)} م`;
+            document.getElementById('room-area').innerText = `${(room.w * room.h).toFixed(1)} م²`;
+            document.getElementById('room-description').innerText = room.desc;
+            document.getElementById('room-icon').innerHTML = `<i class="fa-solid ${room.icon}"></i>`;
+            document.getElementById('room-features').innerHTML = room.features.map(f =>
+                `<li class="flex items-center gap-2 bg-slate-800/40 p-2 rounded-lg border border-slate-700/40">
+                    <i class="fa-solid fa-check-circle text-emerald-400"></i>
+                    <span>${f}</span>
+                </li>`
+            ).join('');
+            panel.classList.remove('-translate-x-full');
+        }
+
+        function closeDetails() {
+            selectedRoom = null;
+            redraw();
+            document.getElementById('details-panel').classList.add('-translate-x-full');
+        }
+
+        window.onload = () => initView();
+    </script>
+</body>
+</html>
